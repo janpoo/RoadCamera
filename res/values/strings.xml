@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">监控摄像头信息系统</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="title_activity_camera_info">信息录入</string>
+    <string name="title_activity_road_carema_info">信息录入</string>
+	<string name="LabelCameraName">电子眼名称</string>
+	<string name="LabelCameraAddress">详细地址</string>
+	<string name="LabelCameraPosition">经纬度</string>
+	<string name="LabelSave">保存</string>
+	<string name="searchLabel">监控摄像搜索</string>
+	<string name="searchHint">请输入监控摄像头的名称或地址</string>	
+</resources>
