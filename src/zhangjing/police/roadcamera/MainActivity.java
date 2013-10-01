@@ -1,18 +1,39 @@
 package zhangjing.police.roadcamera;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.R.color;
+import android.app.ActionBar;
+import android.app.ActionBar.LayoutParams;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
+
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,13 +59,15 @@ import com.baidu.mapapi.map.PopupClickListener;
 import com.baidu.mapapi.map.PopupOverlay;
 import com.baidu.platform.comapi.basestruct.GeoPoint;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements
+		SearchView.OnQueryTextListener {
 
 	final static String TAG = "MainActivity";
 
 	private MapView mMapView = null;
 	private MapController mMapController = null;
 	private ItemizedOverlay mCameraMarkOverlay = null;
+	//private ItemizedOverlay mMapOperOverlay = null;	
 
 	private MKMapViewListener mMapListener = null;
 	private MKMapTouchListener mapTouchListener = null;
@@ -52,7 +75,9 @@ public class MainActivity extends Activity {
 	private LocationClient mLocClient;
 	private LocationData locData = null;
 	private LocationListenner myListener = null;
-	private Button locationButton = null;
+	private ImageButton locationButton = null;
+	private ImageButton zoominButton = null;
+	private ImageButton zoomoutButton = null;
 
 	private boolean isRequest = false;// 是否手动触发请求定位
 	private boolean isFirstLoc = true;// 是否首次定位
@@ -72,9 +97,15 @@ public class MainActivity extends Activity {
 	private Button button = null;
 	private MapView.LayoutParams layoutParam = null;
 	private OverlayItem mCurrentItem = null;
+	private SearchView searchView = null;
 
+	ListView listView;
+
+	ArrayAdapter<String> adapter;
+	List<RoadCameraEntity> searchResult = null;
+	Object[] searchResultNames = new String[]{""};
 	private DBManager db = null;
-	
+
 	private boolean editing = false;
 
 	@Override
@@ -83,8 +114,8 @@ public class MainActivity extends Activity {
 
 		db = new DBManager(MainActivity.this);
 
-		
-		
+		initActionbar();
+
 		// 主地图初始化（百度地图）
 		RoadCameraApplication app = (RoadCameraApplication) this
 				.getApplication();
@@ -98,7 +129,7 @@ public class MainActivity extends Activity {
 		mMapController = mMapView.getController();// 获取地图控制
 		mMapController.enableClick(true);// 设置地图响应点击事件
 		mMapController.setZoom(15);// 设置地图缩放级别
-		mMapView.setBuiltInZoomControls(true);
+		mMapView.setBuiltInZoomControls(false);
 		GeoPoint p;
 		p = new GeoPoint(30191098, 120204964);
 		mMapController.setCenter(p);
@@ -120,8 +151,12 @@ public class MainActivity extends Activity {
 		option.setScanSpan(500);
 		mLocClient.setLocOption(option);
 		mLocClient.start();
-		this.locationButton = (Button) findViewById(R.id.button2);
+		this.locationButton = (ImageButton) findViewById(R.id.btnLocation);
 		this.locationButton.setOnClickListener(new LocationClickListener());
+		this.zoominButton =  (ImageButton) findViewById(R.id.btnZoomin);
+		this.zoominButton.setOnClickListener(new ZoominClickListener());
+		this.zoomoutButton =  (ImageButton) findViewById(R.id.btnZoomout);
+		this.zoomoutButton.setOnClickListener(new ZoomoutClickListener());
 
 		// 地图标识点操作层初始化
 		viewCache = getLayoutInflater()
@@ -136,11 +171,101 @@ public class MainActivity extends Activity {
 		PopupClickListener popListener = new CameraPopupClickListener();
 		pop = new PopupOverlay(mMapView, popListener);
 
+		listView = (ListView) findViewById(R.id.listView1);
+		listView.setAdapter(new ArrayAdapter<Object>(getApplicationContext(),				
+				R.layout.list_item,
+				
+				searchResultNames));
+
+		// listView.setTextFilterEnabled(true);
+		searchView.setOnQueryTextListener(this);
+		searchView.setSubmitButtonEnabled(false);
+		listView.setOnItemClickListener(new SearchResultItemClickListener());
 		
+		//处理搜索框样式 
+		int searchPlateId = searchView.getContext().getResources().getIdentifier("android:id/search_plate", null, null);
+		View searchPlate = searchView.findViewById(searchPlateId);          
+        searchPlate.setBackgroundColor(Color.TRANSPARENT );
+        EditText search_text = (EditText) searchView.findViewById(searchView.getContext().getResources().getIdentifier("android:id/search_src_text", null, null));
+        search_text.setTextSize(TypedValue.COMPLEX_UNIT_PX, getResources().getDimensionPixelSize(R.dimen.text_size_medium));
+        search_text.setGravity(Gravity.BOTTOM);
+	}
+
+	
+	public void initActionbar() {
+		// 自定义标题栏
+		getActionBar().setDisplayShowHomeEnabled(false);
+		getActionBar().setDisplayShowTitleEnabled(false);
+		getActionBar().setDisplayShowCustomEnabled(true);
+		LayoutInflater mInflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		View mTitleView = mInflater.inflate(R.layout.custom_action_bar, null);
+		getActionBar().setCustomView(
+				mTitleView,
+				new ActionBar.LayoutParams(LayoutParams.MATCH_PARENT,
+						LayoutParams.WRAP_CONTENT));
+		searchView = (SearchView) mTitleView.findViewById(R.id.search_view);
 	}
 	
-	
 
+	@Override
+	public boolean onQueryTextChange(String newText) {
+		Log.d("onQueryTextChange","keyword="+newText);
+		if (TextUtils.isEmpty(newText)) {
+			
+			MainActivity.this.listView.setVisibility(View.GONE);
+			
+		} else {
+			
+			MainActivity.this.listView.setVisibility(View.VISIBLE);
+			searchResult = db.query(newText);
+			if (searchResult != null && searchResult.size() > 0) {
+				ArrayList<String> textList = new ArrayList<String>();
+				for (int i = 0; i < searchResult.size(); i++) {
+					String text = searchResult.get(i).CameraName + "("
+							+ searchResult.get(i).Address + ")";
+
+					textList.add(text);
+
+				}
+				
+				updateLayout(textList.toArray());
+				
+			}
+			else
+			{
+				MainActivity.this.listView.setVisibility(View.GONE);
+			}
+
+		}
+		
+
+		return false;
+	}
+	
+	/*
+	public void showCameraMark(List<RoadCameraEntity> marks )
+	{
+		for(int i=0;i<MainActivity.this.mCameraMarkOverlay.size();i++)
+		{
+			OverlayItem item  = MainActivity.this.mCameraMarkOverlay.getItem(i);
+			if(marks == null)
+			{
+				
+			}
+		}
+	}
+	*/
+
+	@Override
+	public boolean onQueryTextSubmit(String query) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public void updateLayout(Object[] obj) {
+		listView.setAdapter(new ArrayAdapter<Object>(getApplicationContext(),
+				android.R.layout.simple_expandable_list_item_1, obj));
+	}
 
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		MainActivity.this.pop.hidePop();
@@ -221,7 +346,7 @@ public class MainActivity extends Activity {
 		this.mCameraMarkOverlay = new CameraMarkOverlay(getResources()
 				.getDrawable(R.drawable.icon_marka), this.mMapView);
 
-		list = MainActivity.this.db.query();
+		list = MainActivity.this.db.query("");
 
 		for (RoadCameraEntity c : list) {
 			GeoPoint p1 = new GeoPoint(c.latitudeE6, c.longitudeE6);
@@ -251,19 +376,18 @@ public class MainActivity extends Activity {
 				return;
 			}
 
-		
 			boolean success = false;
 			String message = "";
 			switch (location.getLocType()) {
 			case 61:
 				success = true;
-				message ="GPS定位成功";
+				message = "GPS定位成功";
 				break;
-			case 62:				
-				message ="定位失败：扫描整合定位依据失败";
+			case 62:
+				message = "定位失败：扫描整合定位依据失败";
 				break;
 			case 63:
-				message ="定位失败：网络异常，没有成功向服务器发起请求";
+				message = "定位失败：网络异常，没有成功向服务器发起请求";
 				break;
 			case 65:
 				success = true;
@@ -272,9 +396,9 @@ public class MainActivity extends Activity {
 			case 161:
 				success = true;
 				message = "定位成功(网络)";
-				break;			
+				break;
 			default:
-				message = "定位异常，错误代码："+location.getLocType();
+				message = "定位异常，错误代码：" + location.getLocType();
 				break;
 
 			}
@@ -290,11 +414,10 @@ public class MainActivity extends Activity {
 
 			// 是手动触发请求或首次定位时，移动到定位点
 			if (success) {
-						
-				GeoPoint p = new GeoPoint(
-						(int) (locData.latitude * 1e6),
+
+				GeoPoint p = new GeoPoint((int) (locData.latitude * 1e6),
 						(int) (locData.longitude * 1e6));
-				OverlayItem item1 = new OverlayItem(p,"当前位置", "");
+				OverlayItem item1 = new OverlayItem(p, "当前位置", "");
 				item1.setMarker((getResources()
 						.getDrawable(R.drawable.nav_turn_via_1)));
 				MainActivity.this.mCameraMarkOverlay.addItem(item1);
@@ -380,18 +503,17 @@ public class MainActivity extends Activity {
 
 		@Override
 		public void onMapLongClick(GeoPoint point) {
-			if(!editing)
-			{
+			if (!editing) {
 				editing = true;
 				Intent intent = null;
-				intent = new Intent(MainActivity.this, RoadCaremaInfoActivity.class);
+				intent = new Intent(MainActivity.this,
+						RoadCaremaInfoActivity.class);
 				intent.putExtra("action", "new");
 				intent.putExtra("clati", point.getLatitudeE6());
 				intent.putExtra("clong", point.getLongitudeE6());
 				intent.putExtra("camera", "");
 				intent.putExtra("address", "");
-		
-				
+
 				MainActivity.this.startActivityForResult(intent,
 						MainActivity.AddRoadCamera);
 			}
@@ -425,13 +547,11 @@ public class MainActivity extends Activity {
 	public class CameraPopupClickListener implements PopupClickListener {
 		@Override
 		public void onClickedPopup(int index) {
-			if(editing)
-			{				
+			if (editing) {
 				return;
 			}
 			MainActivity.this.pop.hidePop();
-			editing = true;
-			
+
 			if (index == 0) {
 				// 编辑
 				if (MainActivity.this.mCurrentItem != null) {
@@ -445,6 +565,7 @@ public class MainActivity extends Activity {
 							.getPoint().getLongitudeE6());
 					MainActivity.this.startActivityForResult(intent,
 							MainActivity.EditRoadCamera);
+					editing = true;
 				}
 			} else if (index == 2) {
 				// 删除
@@ -485,12 +606,72 @@ public class MainActivity extends Activity {
 
 		@Override
 		public void onClick(View v) {
-			
+
 			// TODO Auto-generated method stub
 			requestLocClick();
 
 		}
 
+	}
+	
+	public class ZoominClickListener implements OnClickListener {
+
+		@Override
+		public void onClick(View v) {
+
+			// TODO Auto-generated method stub
+			float level = MainActivity.this.mMapView.getZoomLevel();			 
+			MainActivity.this.mMapController.setZoom(level + 1);
+
+		}
+
+	}
+	
+	public class ZoomoutClickListener implements OnClickListener {
+
+		@Override
+		public void onClick(View v) {
+			
+			float level = MainActivity.this.mMapView.getZoomLevel();			 
+			MainActivity.this.mMapController.setZoom(level - 1);
+		}
+
+	}
+	
+	
+	public class SearchResultItemClickListener implements OnItemClickListener{
+
+		@Override
+		public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
+				long arg3) {
+			MainActivity.this.listView.setVisibility(View.GONE);
+			if(MainActivity.this.searchResult != null && MainActivity.this.searchResult.size() > arg2)
+			{
+				RoadCameraEntity e = MainActivity.this.searchResult.get(arg2);
+				GeoPoint p = new GeoPoint(e.latitudeE6,e.longitudeE6);
+				ArrayList<OverlayItem> items =  MainActivity.this.mCameraMarkOverlay.getAllItem();
+				
+				for(int i=0;i<items.size();i++)
+				{
+					GeoPoint p1= items.get(i).getPoint();
+					if(p1.getLatitudeE6() == p.getLatitudeE6() && p1.getLongitudeE6() == p.getLongitudeE6())
+					{
+						mCurrentItem = items.get(i);
+
+						popupText.setText(mCurrentItem.getTitle());
+
+						Bitmap[] bitMaps = { BMapUtil.getBitmapFromView(popupLeft),
+								BMapUtil.getBitmapFromView(popupInfo),
+								BMapUtil.getBitmapFromView(popupRight) };
+
+						pop.showPopup(bitMaps, mCurrentItem.getPoint(), 32);
+						mMapController.animateTo(p);
+
+					}
+				}
+			}
+		}
+		
 	}
 
 }

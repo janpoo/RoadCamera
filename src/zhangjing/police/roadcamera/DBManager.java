@@ -86,9 +86,9 @@ public class DBManager {
 	}
 
 
-	public List<RoadCameraEntity> query() {
+	public List<RoadCameraEntity> query(String keyword) {
 		ArrayList<RoadCameraEntity> cameras = new ArrayList<RoadCameraEntity>();
-		Cursor c = queryTheCursor();
+		Cursor c = queryTheCursor(keyword);
 		Log.v(DBManager.TAG,
 				"query->" + String.format("count= %d", c.getCount()));
 		while (c.moveToNext()) {
@@ -108,10 +108,10 @@ public class DBManager {
 	}
 
 
-	public Cursor queryTheCursor() {
+	public Cursor queryTheCursor(String keyWord) {
 		Cursor c = db.rawQuery(
 				"SELECT ID,Address,CarmeraName,latitudeE6,longitudeE6 FROM "
-						+ DBHelper.ROADCAMERA_TABLE, null);
+						+ DBHelper.ROADCAMERA_TABLE  + " where CarmeraName like '%"+keyWord+"%' or Address like '%"+keyWord+"%'", null);
 		return c;
 	}
 

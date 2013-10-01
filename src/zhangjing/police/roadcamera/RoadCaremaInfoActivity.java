@@ -45,9 +45,9 @@ public class RoadCaremaInfoActivity extends Activity {
 
 		setContentView(R.layout.activity_road_carema_info);
 
-		cameraNameEdit = (EditText) this.findViewById(R.id.editText1);
-		cameraAddressEdit = (EditText) this.findViewById(R.id.editText2);
-		cameraPositionEdit = (EditText) this.findViewById(R.id.editText3);
+		cameraNameEdit = (EditText) this.findViewById(R.id.editName);
+		cameraAddressEdit = (EditText) this.findViewById(R.id.editAddr);
+		cameraPositionEdit = (EditText) this.findViewById(R.id.editPoistion);
 		saveButton = (Button) this.findViewById(R.id.button1);
 		saveButton.setOnClickListener(new SaveButtonClickListener());
 

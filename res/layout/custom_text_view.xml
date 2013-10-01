@@ -15,6 +15,7 @@
         android:textStyle="bold"
          android:textColor="#3814ed"
         android:text="修改"
+         android:layout_marginRight="5dip"
         android:textSize="23sp" />
 
    
@@ -22,6 +23,8 @@
 	    android:layout_width="wrap_content"
 	    android:layout_height="wrap_content"
 	    android:orientation="vertical"
+	    android:layout_marginLeft="10dip"
+	    android:layout_marginRight="10dip"
 	    android:id="@+id/popinfo"
 	    >
 	    
@@ -56,6 +59,7 @@
         android:gravity="center"
         android:textStyle="bold"
         android:text="删除"
+        android:layout_marginLeft="5dip"
         android:textSize="23sp" />
 
 </LinearLayout>

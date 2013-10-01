@@ -16,12 +16,41 @@
         android:layout_alignParentRight="true"
         android:clickable="true" />
 
-    <Button
-        android:id="@+id/button2"
-        style="?android:attr/buttonStyleSmall"
+    <ListView
+        android:id="@+id/listView1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#AAAAAA"
+        android:cacheColorHint="#000000"
+        android:visibility="invisible" >
+    </ListView>
+
+    <ImageButton
+        android:id="@+id/btnLocation"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignRight="@+id/bmapView"
-        android:layout_alignTop="@+id/bmapView"
-        android:text="定位" />
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:background="@android:color/transparent"
+        android:src="@drawable/location_button_selecter" />
+
+    <ImageButton
+        android:id="@+id/btnZoomout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:background="@android:color/transparent"
+        android:src="@drawable/zoomout_button_selecter" />
+
+    <ImageButton
+        android:id="@+id/btnZoomin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="40dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/zoomin_button_selecter" />
+    
 </RelativeLayout>
